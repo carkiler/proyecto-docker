@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  
+  nginx-proxy-manager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      
+      - '80:80'      
+      - '443:443'    
+      - '81:81'     
+    volumes:
+      - ./npm/data:/data
+      - ./npm/letsencrypt:/etc/letsencrypt
+    networks:
+      - proxy-net
+
+ 
+  app-html:
+    image: 'nginx:alpine'
+    container_name: app-html
+    restart: unless-stopped
+    volumes:
+      
+      - ./html-app:/usr/share/nginx/html:ro
+    networks:
+      - proxy-net
+
+  
+  odoo:
+    image: 'odoo:16.0' 
+    container_name: odoo-app
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - HOST=db
+      - USER=odoo
+      
+      - PASSWORD=tecno 
+      - ODOO_EXTRA_ARGS=--proxy-mode --workers 0
+     
+      - WAIT_HOSTS=db:5432 
+    volumes:
+      - ./odoo/config:/etc/odoo
+      - ./odoo/data:/var/lib/odoo
+    networks:
+      - proxy-net
+    
+ 
+  db:
+    image: 'postgres:13'
+    container_name: odoo-db
+    restart: always
+    environment:
+      - POSTGRES_DB=postgres
+      
+      - POSTGRES_PASSWORD=tecno 
+      - POSTGRES_USER=odoo
+    volumes:
+    
+      - ./odoo/db:/var/lib/postgresql/data
+    networks:
+      - proxy-net
+      
+networks:
+  proxy-net:
+    driver: bridge
